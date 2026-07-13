@@ -1,0 +1,141 @@
+#include <stdio.h>
+#include <string.h>
+
+int main()
+{
+    char text[100]; // To hold the user's input string
+    char data[800]; // To hold the converted binary string of bits
+    char stuffed[1000], received[1000], destuffed[1000];
+    char flag[] = "01111110"; // 8-bit framing flag
+    int i, j = 0, b, count = 0;
+    int parity = 0, receivedParity, newParity = 0;
+
+    // 1. Get String Input from User
+    printf("Enter the text string: ");
+    scanf("%99s", text);
+    int len = strlen(text);
+
+    // 2. Convert ASCII Characters to a string of binary bits ('0' and '1')
+    int bit_index = 0;
+    for(i = 0; i < len; i++)
+    {
+        char ascii = text[i];
+        for(b = 7; b >= 0; b--)
+        {
+            if((ascii >> b) & 1)
+                data[bit_index++] = '1';
+            else
+                data[bit_index++] = '0';
+        }
+    }
+    data[bit_index] = '\0';
+
+    // 3. Generate Parity Bit (Even Parity)
+    for(i = 0; data[i] != '\0'; i++)
+    {
+        if(data[i] == '1')
+            parity ^= 1;
+    }
+    printf("Generated Parity Bit : %d\n", parity);
+
+    // 4. Bit Stuffing (Sender Side)
+    // First, copy the starting flag into the stuffed frame
+    strcpy(stuffed, flag);
+    j = strlen(stuffed);
+
+    // Next, perform bit stuffing on the data bits
+    for(i = 0; data[i] != '\0'; i++)
+    {
+        stuffed[j++] = data[i];
+        if(data[i] == '1')
+            count++;
+        else
+            count = 0;
+
+        if(count == 5)
+        {
+            stuffed[j++] = '0';
+            count = 0;
+        }
+    }
+    stuffed[j] = '\0';
+
+    // Finally, append the ending flag to the stuffed frame
+    strcat(stuffed, flag);
+
+    // Display Sender Outputs
+    printf("\nOriginal Text     : %s\n", text);
+    printf("Original Data Bits: %s\n", data);
+    printf("Stuffed Frame     : %s\n", stuffed);
+    printf("Transmitted Frame : %s\n", stuffed);
+
+    // 5. Automatic Receiver Side Passing
+    strcpy(received, stuffed);
+    receivedParity = parity;
+    printf("\n--- Receiver side---\n");
+    printf("Received Frame    : %s\n", received);
+    printf("Received Parity   : %d\n", receivedParity);
+
+    // 6. Bit Destuffing & Flag Stripping (Receiver Side)
+    // Start index 'i' after the first flag, and stop before the last flag
+    int flag_len = strlen(flag);
+    int received_len = strlen(received);
+
+    i = flag_len;
+    j = 0;
+    count = 0;
+
+    // Loop until we reach the starting index of the trailing flag
+    while(i < (received_len - flag_len))
+    {
+        destuffed[j++] = received[i];
+
+        if(received[i] == '1')
+            count++;
+        else
+            count = 0;
+
+        if(count == 5)
+        {
+            i++; // Skip the stuffed '0' bit
+            count = 0;
+        }
+        i++;
+    }
+    destuffed[j] = '\0';
+    printf("De-stuffed Data   : %s\n", destuffed);
+
+    // 7. Verify Parity on Destuffed Bits
+    for(i = 0; destuffed[i] != '\0'; i++)
+    {
+        if(destuffed[i] == '1')
+            newParity ^= 1;
+    }
+
+    if(newParity == receivedParity)
+        printf("Status            : No Error Detected\n");
+    else
+        printf("Status            : Error Detected\n");
+
+    // 8. Convert Destuffed Bits Back to Original String
+    char recovered_text[100];
+    int char_index = 0;
+
+    for (i = 0; destuffed[i] != '\0'; i += 8)
+    {
+        char current_char = 0;
+        for (b = 0; b < 8; b++)
+        {
+            current_char <<= 1;
+            if (destuffed[i + b] == '1')
+            {
+                current_char |= 1;
+            }
+        }
+        recovered_text[char_index++] = current_char;
+    }
+    recovered_text[char_index] = '\0';
+    printf("Recovered Text    : %s\n", recovered_text);
+
+    return 0;
+}
