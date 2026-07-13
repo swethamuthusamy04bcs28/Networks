@@ -1,0 +1,155 @@
+#include <stdio.h>
+#include <string.h>
+
+int main()
+{
+    char str[100];
+    int data[100][8];    // Stores original binary bytes
+    int output[200][8];  // Stores stuffed binary frame
+    int destuffed[100][8]; // Stores recovered binary bytes
+
+    int flag[8] = {0,1,1,1,1,1,1,0}; // 01111110
+    int esc[8]  = {0,1,1,1,1,1,0,1}; // 01111101
+
+    int n = 0, i, j = 0, k;
+    int stuffing = 0;
+    int isFlag, isEsc;
+
+    printf("Enter the string: ");
+    fgets(str, sizeof(str), stdin);
+    str[strcspn(str, "\n")] = '\0';
+
+    // 1. Convert String to ASCII and then into 8-bit Binary Bytes
+    for(i = 0; str[i] != '\0'; i++)
+    {
+        int ascii = (int)str[i];
+        for(k = 7; k >= 0; k--)
+        {
+            data[n][7 - k] = (ascii >> k) & 1; // Fills from index 0 to 7
+        }
+        n++; // Count total number of bytes
+    }
+
+    // 2. Add Starting Flag
+    for(k = 0; k < 8; k++)
+        output[j][k] = flag[k];
+    j++;
+
+    // 3. Byte Stuffing Process
+    for(i = 0; i < n; i++)
+    {
+        isFlag = 1;
+        isEsc = 1;
+
+        // Compare current byte with Flag and Escape bytes
+        for(k = 0; k < 8; k++)
+        {
+            if(data[i][k] != flag[k])
+                isFlag = 0;
+
+            if(data[i][k] != esc[k])
+                isEsc = 0;
+        }
+
+        // Insert Escape byte if Data Byte matches Flag or Escape
+        if(isFlag || isEsc)
+        {
+            for(k = 0; k < 8; k++)
+                output[j][k] = esc[k];
+
+            j++;
+            stuffing = 1;
+        }
+
+        // Copy Original Byte
+        for(k = 0; k < 8; k++)
+            output[j][k] = data[i][k];
+
+        j++;
+    }
+
+    // 4. Add Ending Flag
+    for(k = 0; k < 8; k++)
+        output[j][k] = flag[k];
+    j++;
+
+    // Display Original Data
+    printf("\nOriginal Data:\n");
+    for(i = 0; i < n; i++)
+    {
+        for(k = 0; k < 8; k++)
+            printf("%d", data[i][k]);
+        printf(" ");
+    }
+
+    if(stuffing)
+        printf("\n\nByte Stuffing Performed.\n");
+    else
+        printf("\n\nNo Byte Stuffing Required.\n");
+
+    // Display Transmitted Frame
+    printf("\nTransmitted Frame:\n");
+    for(i = 0; i < j; i++)
+    {
+        for(k = 0; k < 8; k++)
+            printf("%d", output[i][k]);
+        printf(" ");
+    }
+    printf("\n");
+
+
+    // 5. Byte Destuffing Process (Skipping start/end flags and removing ESC)
+    int destuffed_bytes = 0;
+
+    // Start loop at 1 (skipping start flag) and end before j-1 (skipping end flag)
+    for(i = 1; i < j - 1; i++)
+    {
+        isEsc = 1;
+
+        // Check if the current byte is an Escape byte
+        for(k = 0; k < 8; k++)
+        {
+            if(output[i][k] != esc[k])
+                isEsc = 0;
+        }
+
+        // If it is an Escape byte, skip it and take the next literal byte
+        if(isEsc)
+        {
+            i++;
+        }
+
+        // Copy the actual data byte into destuffed matrix
+        for(k = 0; k < 8; k++)
+        {
+            destuffed[destuffed_bytes][k] = output[i][k];
+        }
+        destuffed_bytes++;
+    }
+
+    // Display Destuffed Data
+    printf("\nDestuffed Data:\n");
+    for(i = 0; i < destuffed_bytes; i++)
+    {
+        for(k = 0; k < 8; k++)
+            printf("%d", destuffed[i][k]);
+        printf(" ");
+    }
+
+    // 6. Convert Destuffed Binary Bytes back to Text String
+    char recovered_str[100];
+    for(i = 0; i < destuffed_bytes; i++)
+    {
+        int ascii_val = 0;
+        for(k = 0; k < 8; k++)
+        {
+            ascii_val = (ascii_val << 1) | destuffed[i][k];
+        }
+        recovered_str[i] = (char)ascii_val;
+    }
+    recovered_str[destuffed_bytes] = '\0'; // Null-terminate string
+
+    printf("\n\nRecovered String: %s\n", recovered_str);
+
+    return 0;
+}
