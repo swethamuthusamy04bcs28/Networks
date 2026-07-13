@@ -1,0 +1,71 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Pre-allocate a 2D array matrix to serve as our Trie memory pool.
+// Max nodes needed = total numbers * maximum bits per number = 100005 * 31
+#define MAX_NODES 3100005
+
+int trie[MAX_NODES][2];
+int nodeCount;
+
+// Reset the pool pointer for each test case run
+void initTrie() {
+    nodeCount = 0;
+    trie[0][0] = 0;
+    trie[0][1] = 0;
+}
+
+// Ultra-fast node insertion using array indexing
+void insert(int num) {
+    int curr = 0;
+    for (int i = 30; i >= 0; i--) {
+        int bit = (num >> i) & 1;
+        if (!trie[curr][bit]) {
+            nodeCount++;
+            trie[nodeCount][0] = 0;
+            trie[nodeCount][1] = 0;
+            trie[curr][bit] = nodeCount;
+        }
+        curr = trie[curr][bit];
+    }
+}
+
+// Greedy check for maximum bit differences
+int getMaxXOR(int num) {
+    int curr = 0;
+    int maxForNum = 0;
+    for (int i = 30; i >= 0; i--) {
+        int bit = (num >> i) & 1;
+        int toggledBit = 1 - bit;
+
+        if (trie[curr][toggledBit]) {
+            maxForNum |= (1 << i);
+            curr = trie[curr][toggledBit];
+        } else {
+            curr = trie[curr][bit];
+        }
+    }
+    return maxForNum;
+}
+
+int findMaximumXOR(int* nums, int numsSize) {
+    if (numsSize < 2) return 0;
+    
+    // Initialize our allocation-free pool
+    initTrie();
+
+    for (int i = 0; i < numsSize; i++) {
+        insert(nums[i]);
+    }
+
+    int globalMaxXOR = 0;
+    for (int i = 0; i < numsSize; i++) {
+        int currentMax = getMaxXOR(nums[i]);
+        if (currentMax > globalMaxXOR) {
+            globalMaxXOR = currentMax;
+        }
+    }
+
+    return globalMaxXOR;
+}
