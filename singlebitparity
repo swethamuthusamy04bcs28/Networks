@@ -1,0 +1,169 @@
+#include <stdio.h>
+#include <string.h>
+
+int main()
+{
+    // Fixed array sizes to prevent memory corruption
+    char textInput[200];
+    char data[1500] = "";
+    char frames[200][9];
+
+    int len, numFrames = 0;
+    int i, j, k = 0;
+    int ones, parity;
+    char choice;
+
+    printf("\n============================================\n");
+    printf(" SINGLE PARITY ERROR DETECTION TECHNIQUE\n");
+    printf("============================================\n");
+
+    printf("\nEnter String Data: ");
+    scanf(" %[^\n]", textInput);
+
+    // Convert text string into 7-bit binary blocks
+    int textLen = strlen(textInput);
+    for(i = 0; i < textLen; i++)
+    {
+        char ch = textInput[i];
+        for(j = 6; j >= 0; j--)
+        {
+            if((ch >> j) & 1)
+                strcat(data, "1");
+            else
+                strcat(data, "0");
+        }
+    }
+
+    len = strlen(data);
+
+    // ---------------- Sender Side ----------------
+    while(k < len)
+    {
+        ones = 0;
+        for(j = 0; j < 7; j++)
+        {
+            if(k < len)
+            {
+                frames[numFrames][j] = data[k];
+                if(data[k] == '1')
+                    ones++;
+                k++;
+            }
+            else
+            {
+                frames[numFrames][j] = '0'; // Padding
+            }
+        }
+
+        // Even Parity Logic
+        if(ones % 2 == 0)
+            parity = 0;
+        else
+            parity = 1;
+
+        frames[numFrames][7] = parity + '0';
+        frames[numFrames][8] = '\0';
+        numFrames++;
+    }
+
+    printf("\nGenerated Frames (7 Data Bits + 1 Parity Bit)\n");
+    for(i = 0; i < numFrames; i++)
+    {
+        printf("Frame %d (Char '%c') : %s\n", i + 1, textInput[i], frames[i]);
+    }
+
+    // ---------------- Error Simulation ----------------
+    printf("\nDo you want to simulate an error? (Y/N): ");
+    scanf(" %c", &choice);
+
+    if(choice == 'Y' || choice == 'y')
+    {
+        int frameNo, bitPos;
+        printf("Enter Frame Number (1-%d): ", numFrames);
+        scanf("%d", &frameNo);
+        printf("Enter Bit Position (1-8): ");
+        scanf("%d", &bitPos);
+
+        if(frameNo >= 1 && frameNo <= numFrames && bitPos >= 1 && bitPos <= 8)
+        {
+            if(frames[frameNo-1][bitPos-1] == '0')
+                frames[frameNo-1][bitPos-1] = '1';
+            else
+                frames[frameNo-1][bitPos-1] = '0';
+            printf("\nError Simulated Successfully.\n");
+        }
+        else
+        {
+            printf("\nInvalid Frame Number or Bit Position.\n");
+        }
+    }
+
+    // ---------------- Receiver Side ----------------
+    printf("\nReceived Frames\n");
+    for(i = 0; i < numFrames; i++)
+    {
+        printf("Frame %d : %s\n", i + 1, frames[i]);
+    }
+
+    printf("\nReceiver Checking...\n");
+    int errorFound = 0;
+
+    for(i = 0; i < numFrames; i++)
+    {
+        ones = 0;
+        for(j = 0; j < 8; j++)
+        {
+            if(frames[i][j] == '1')
+                ones++;
+        }
+
+        if(ones % 2 == 0)
+            printf("Frame %d : No Error Detected\n", i + 1);
+        else
+        {
+            printf("Frame %d : Error Detected\n", i + 1);
+            errorFound = 1;
+        }
+    }
+
+    // ---------------- Final Result ----------------
+    if(errorFound)
+    {
+        printf("\n--------------------------------------\n");
+        printf("MESSAGE DISCARDED\n");
+        printf("--------------------------------------\n");
+    }
+    else
+    {
+        printf("\n--------------------------------------\n");
+        printf("NO ERROR DETECTED\n");
+        printf("Original Message Received Successfully\n\n");
+
+        // 1. Display Extracted Data Bits in Binary (Strip the Parity Bit)
+        printf("Extracted Binary Data : ");
+        for(i = 0; i < numFrames; i++)
+        {
+            for(j = 0; j < 7; j++)
+            {
+                printf("%c", frames[i][j]);
+            }
+            printf(" "); // Spaces separating individual character streams
+        }
+        printf("\n");
+
+        // 2. Display Extracted Data Blocks as ASCII Characters
+        printf("Extracted String Message: ");
+        for(i = 0; i < numFrames; i++)
+        {
+            char ch = 0;
+            for(j = 0; j < 7; j++)
+            {
+                ch = (ch << 1) | (frames[i][j] - '0');
+            }
+            printf("%c", ch);
+        }
+        printf("\n--------------------------------------\n");
+    }
+
+    return 0;
+}
