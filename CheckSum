@@ -1,0 +1,195 @@
+#include <stdio.h>
+#include <string.h>
+
+
+char textInput[100];
+char data[800] = "";
+char blocks[100][9];
+char checksum[9];
+
+void binaryAddition(char a[], char b[])
+{
+    int carry = 0;
+    int i;
+
+    // Normal binary addition
+    for(i = 7; i >= 0; i--)
+    {
+        int sum = (a[i] - '0') + (b[i] - '0') + carry;
+        a[i] = (sum % 2) + '0';
+        carry = sum / 2;
+    }
+
+
+    if(carry > 0)
+    {
+        for(i = 7; i >= 0; i--)
+        {
+            int sum = (a[i] - '0') + carry;
+            a[i] = (sum % 2) + '0';
+            carry = sum / 2;
+        }
+    }
+}
+
+int main()
+{
+    int len, i, j, k = 0, numBlocks = 0;
+    char sum[9] = "00000000";
+    char receivedSum[9];
+    char choice;
+
+    printf("\n========== CHECKSUM ERROR DETECTION ==========\n");
+
+    // Accept standard string input with spaces safely
+    printf("Enter String Data : ");
+    scanf(" %[^\n]", textInput);
+
+   
+    int textLen = strlen(textInput);
+    for(i = 0; i < textLen; i++)
+    {
+        char ch = textInput[i];
+        for(j = 7; j >= 0; j--)
+        {
+            if((ch >> j) & 1)
+                strcat(data, "1");
+            else
+                strcat(data, "0");
+        }
+    }
+
+    len = strlen(data);
+    printf("Converted Binary Data : %s\n", data);
+
+
+    while(k < len)
+    {
+        for(j = 0; j < 8; j++)
+        {
+            if(k < len)
+                blocks[numBlocks][j] = data[k++];
+            else
+                blocks[numBlocks][j] = '0'; // Padding
+        }
+        blocks[numBlocks][8] = '\0';
+        numBlocks++;
+    }
+
+    printf("\nData Blocks\n");
+    for(i = 0; i < numBlocks; i++)
+    {
+        printf("Block %d (Char '%c') : %s\n", i + 1, textInput[i], blocks[i]);
+        binaryAddition(sum, blocks[i]);
+    }
+
+    // Generate checksum (1's complement of sum)
+    for(i = 0; i < 8; i++)
+    {
+        if(sum[i] == '0')
+            checksum[i] = '1';
+        else
+            checksum[i] = '0';
+    }
+    checksum[8] = '\0';
+
+    printf("\nGenerated Checksum : %s\n", checksum);
+
+    printf("\nTransmitted Frame : ");
+    for(i = 0; i < numBlocks; i++)
+        printf("%s ", blocks[i]);
+    printf("[%s]\n", checksum);
+
+    // ---------------- Receiver Side ----------------
+    strcpy(receivedSum, "00000000");
+    for(i = 0; i < numBlocks; i++)
+        binaryAddition(receivedSum, blocks[i]);
+    binaryAddition(receivedSum, checksum);
+
+    // ---------------- Error Simulation ----------------
+    printf("\nSimulate Error? (Y/N): ");
+    scanf(" %c", &choice);
+
+    if(choice == 'Y' || choice == 'y')
+    {
+        int blockNo, bitPos;
+
+        printf("Enter Block Number (1-%d): ", numBlocks);
+        scanf("%d", &blockNo);
+
+        printf("Enter Bit Position (1-8): ");
+        scanf("%d", &bitPos);
+
+        if(blockNo >= 1 && blockNo <= numBlocks && bitPos >= 1 && bitPos <= 8)
+        {
+            if(blocks[blockNo - 1][bitPos - 1] == '0')
+                blocks[blockNo - 1][bitPos - 1] = '1';
+            else
+                blocks[blockNo - 1][bitPos - 1] = '0';
+
+            printf("\nError Simulated Successfully.\n");
+
+            // Recalculate sum with the error introduced
+            strcpy(receivedSum, "00000000");
+            for(i = 0; i < numBlocks; i++)
+                binaryAddition(receivedSum, blocks[i]);
+            binaryAddition(receivedSum, checksum);
+        }
+        else
+        {
+            printf("Invalid Position.\n");
+            return 0;
+        }
+    }
+
+    printf("\nReceived Blocks\n");
+    for(i = 0; i < numBlocks; i++)
+        printf("Block %d : %s\n", i + 1, blocks[i]);
+    printf("Checksum : %s\n", checksum);
+
+    // Verify received sum (Must be all 1s for no error)
+    int error = 0;
+    for(i = 0; i < 8; i++)
+    {
+        if(receivedSum[i] != '1')
+        {
+            error = 1;
+            break;
+        }
+    }
+
+    // ---------------- Final Result ----------------
+    if(error)
+    {
+        printf("\nFinal Received Sum : %s", receivedSum);
+        printf("\nResult : ERROR DETECTED\n");
+        printf("Message Discarded\n");
+    }
+    else
+    {
+        printf("\nFinal Received Sum : %s", receivedSum);
+        printf("\nResult : NO ERROR\n");
+
+        // 1. Display Extracted Data Bits in Binary
+        printf("\nExtracted Binary Data   : ");
+        for(i = 0; i < numBlocks; i++)
+        {
+            printf("%s ", blocks[i]);
+        }
+
+        // 2. Convert Data Bits back into Text Characters
+        printf("\nExtracted String Message: ");
+        for(i = 0; i < numBlocks; i++)
+        {
+            char ch = 0;
+            for(j = 0; j < 8; j++)
+            {
+                ch = (ch << 1) | (blocks[i][j] - '0');
+            }
+            printf("%c", ch);
+        }
+        printf("\n--------------------------------------\n");
+    }
+
+    return 0;
+}
