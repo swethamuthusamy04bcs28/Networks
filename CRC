@@ -1,0 +1,196 @@
+#include <stdio.h>
+#include <string.h>
+
+// Global arrays sized safely to prevent memory corruption
+char textInput[100];
+char data[800], divisor[30];
+char dividend[1000], cremainder[1000];
+char transmitted[1000], received[1000];
+
+int main()
+{
+    int dataLen, divLen;
+    int i, j;
+    char choice;
+
+    printf("\n========== CRC ERROR DETECTION ==========\n");
+
+    // Accept standard string input with spaces safely
+    printf("Enter String Data : ");
+    scanf(" %[^\n]", textInput);
+
+    // Convert the text string into an 8-bit binary representation
+    int textLen = strlen(textInput);
+    data[0] = '\0'; // Initialize empty string
+
+    for(i = 0; i < textLen; i++)
+    {
+        char ch = textInput[i];
+        // Standard ASCII conversion using 8 bits (MSB down to LSB)
+        for(j = 7; j >= 0; j--)
+        {
+            if((ch >> j) & 1)
+                strcat(data, "1");
+            else
+                strcat(data, "0");
+        }
+    }
+
+    printf("Converted Binary Data : %s\n", data);
+
+    printf("Enter Generator Polynomial : ");
+    scanf("%s", divisor);
+
+    dataLen = strlen(data);
+    divLen = strlen(divisor);
+
+    // Validate generator is binary
+    for(i = 0; i < divLen; i++)
+    {
+        if(divisor[i] != '0' && divisor[i] != '1')
+        {
+            printf("\nInvalid Generator Polynomial.\n");
+            return 0;
+        }
+    }
+
+    // ---------------- Sender Side ----------------
+    strcpy(dividend, data);
+
+    // Append (divLen - 1) zeros to the data stream
+    for(i = 0; i < divLen - 1; i++)
+        dividend[dataLen + i] = '0';
+
+    dividend[dataLen + divLen - 1] = '\0';
+
+    strcpy(cremainder, dividend);
+
+    // Perform modulo-2 division
+    for(i = 0; i <= dataLen - 1; i++)
+    {
+        if(cremainder[i] == '1')
+        {
+            for(j = 0; j < divLen; j++)
+            {
+                if(cremainder[i + j] == divisor[j])
+                    cremainder[i + j] = '0';
+                else
+                    cremainder[i + j] = '1';
+            }
+        }
+    }
+
+    strcpy(transmitted, data);
+
+    printf("\nCRC Bits : ");
+    for(i = 0; i < divLen - 1; i++)
+    {
+        transmitted[dataLen + i] = cremainder[dataLen + i];
+        printf("%c", cremainder[dataLen + i]);
+    }
+
+    transmitted[dataLen + divLen - 1] = '\0';
+    printf("\nTransmitted Frame : %s\n", transmitted);
+
+    // ---------------- Error Simulation ----------------
+    strcpy(received, transmitted);
+
+    printf("\nSimulate Error? (Y/N): ");
+    scanf(" %c", &choice);
+
+    if(choice == 'Y' || choice == 'y')
+    {
+        int pos;
+        printf("Enter Bit Position to Flip (1-%lu): ", strlen(received));
+        scanf("%d", &pos);
+
+        if(pos >= 1 && pos <= strlen(received))
+        {
+            if(received[pos - 1] == '0')
+                received[pos - 1] = '1';
+            else
+                received[pos - 1] = '0';
+            printf("\nError Simulated Successfully.\n");
+        }
+        else
+        {
+            printf("Invalid Position\n");
+            return 0;
+        }
+    }
+
+    // ---------------- Receiver Side ----------------
+    printf("\nReceived Frame : %s\n", received);
+
+    strcpy(cremainder, received);
+
+    // Perform receiver-side modulo-2 division
+    for(i = 0; i <= strlen(received) - divLen; i++)
+    {
+        if(cremainder[i] == '1')
+        {
+            for(j = 0; j < divLen; j++)
+            {
+                if(cremainder[i + j] == divisor[j])
+                    cremainder[i + j] = '0';
+                else
+                    cremainder[i + j] = '1';
+            }
+        }
+    }
+
+    int error = 0;
+    // Check if any remainder bit is non-zero
+    for(i = strlen(received) - divLen + 1; i < strlen(received); i++)
+    {
+        if(cremainder[i] != '0')
+        {
+            error = 1;
+            break;
+        }
+    }
+
+    // ---------------- Final Result ----------------
+    if(error)
+    {
+        printf("\nCRC Remainder : ");
+        for(i = strlen(received) - divLen + 1; i < strlen(received); i++)
+            printf("%c", cremainder[i]);
+
+        printf("\n\nResult : ERROR DETECTED");
+        printf("\nMessage Discarded\n");
+    }
+    else
+    {
+        printf("\nCRC Remainder : ");
+        for(i = strlen(received) - divLen + 1; i < strlen(received); i++)
+            printf("%c", cremainder[i]);
+
+        printf("\n\nResult : NO ERROR");
+
+        // 1. Display Extracted Data Bits in Binary
+        printf("\nExtracted Binary Data   : ");
+        for(i = 0; i < dataLen; i++)
+        {
+            printf("%c", received[i]);
+            // Format output: separate character bytes with a space for legibility
+            if((i + 1) % 8 == 0 && i < dataLen - 1)
+                printf(" ");
+        }
+
+        // 2. Convert Data Bits back into Text Characters
+        printf("\nExtracted String Message: ");
+        for(i = 0; i < dataLen; i += 8)
+        {
+            char ch = 0;
+            for(j = 0; j < 8; j++)
+            {
+                ch = (ch << 1) | (received[i + j] - '0');
+            }
+            printf("%c", ch);
+        }
+        printf("\n");
+    }
+
+    return 0;
+}
