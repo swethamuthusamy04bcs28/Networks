@@ -1,0 +1,38 @@
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <stdlib.h>
+
+/*
+ * Complete the 'maximizingXor' function below.
+ */
+int maximizingXor(int l, int r) {
+    // XOR l and r to find the highest bit position where they differ
+    int xor_diff = l ^ r;
+    
+    // Find the next power of 2 greater than xor_diff
+    int max_xor = 1;
+    while (max_xor <= xor_diff) {
+        max_xor <<= 1;
+    }
+    
+    // Subtract 1 to turn all bits below that power of 2 into 1s
+    return max_xor - 1;
+}
+
+int main() {
+    int l;
+    int r;
+    
+    // Read the lower bound and upper bound inputs from HackerRank
+    if (scanf("%d", &l) != 1) return 1;
+    if (scanf("%d", &r) != 1) return 1;
+    
+    // Calculate the maximum XOR value
+    int result = maximizingXor(l, r);
+    
+    // Print the final result to standard output
+    printf("%d\n", result);
+    
+    return 0;
+}
