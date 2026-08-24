@@ -1,0 +1,55 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+typedef struct {
+    int to;
+    int needs_flip;
+} Edge;
+int minReorder(int n, int** connections, int connectionsSize, int* connectionsColSize) {
+    int* degrees = (int*)calloc(n, sizeof(int));
+    for (int i = 0; i < connectionsSize; i++) {
+        degrees[connections[i][0]]++;
+        degrees[connections[i][1]]++;
+    }
+    Edge** adj = (Edge**)malloc(n * sizeof(Edge*));
+    for (int i = 0; i < n; i++) {
+        adj[i] = (Edge*)malloc(degrees[i] * sizeof(Edge));
+    }
+    int* current_index_tracker = (int*)calloc(n, sizeof(int));
+    for (int i = 0; i < connectionsSize; i++) {
+        int u = connections[i][0];
+        int v = connections[i][1];
+        int idx_u = current_index_tracker[u]++;
+        adj[u][idx_u].to = v;
+        adj[u][idx_u].needs_flip = 1;
+        int idx_v = current_index_tracker[v]++;
+        adj[v][idx_v].to = u;
+        adj[v][idx_v].needs_flip = 0;
+    }
+    int* queue = (int*)malloc(n * sizeof(int));
+    bool* visited = (bool*)calloc(n, sizeof(bool));
+    int head = 0, tail = 0;
+    queue[tail++] = 0;
+    visited[0] = true;
+    int total_flips = 0;
+    while (head < tail) {
+        int curr = queue[head++];
+        for (int i = 0; i < degrees[curr]; i++) {
+            Edge neighbor = adj[curr][i];
+            if (!visited[neighbor.to]) {
+                visited[neighbor.to] = true;
+                total_flips += neighbor.needs_flip;
+                queue[tail++] = neighbor.to;
+            }
+        }
+    }
+    free(degrees);
+    free(current_index_tracker);
+    for (int i = 0; i < n; i++) {
+        free(adj[i]);
+    }
+    free(adj);
+    free(queue);
+    free(visited);
+    return total_flips;
+}
