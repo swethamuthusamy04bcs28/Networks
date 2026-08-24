@@ -1,0 +1,97 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define MAX_STOPS 1000000
+typedef struct {
+    int stop;
+    int bus_count;
+} QueueNode;
+
+int numBusesToDestination(int** routes, int routesSize, int* routesColSize, int source, int target) {
+    if (source == target) {
+        return 0;
+    }
+    int* bus_count_per_stop = (int*)calloc(MAX_STOPS, sizeof(int));
+    for (int i = 0; i < routesSize; i++) {
+        for (int j = 0; j < routesColSize[i]; j++) {
+            bus_count_per_stop[routes[i][j]]++;
+        }
+    }
+    int** stop_to_buses = (int**)malloc(MAX_STOPS * sizeof(int*));
+    int* stop_index_tracker = (int*)calloc(MAX_STOPS, sizeof(int));
+    for (int i = 0; i < MAX_STOPS; i++) {
+        if (bus_count_per_stop[i] > 0) {
+            stop_to_buses[i] = (int*)malloc(bus_count_per_stop[i] * sizeof(int));
+        } else {
+            stop_to_buses[i] = NULL;
+        }
+    }
+    for (int i = 0; i < routesSize; i++) {
+        for (int j = 0; j < routesColSize[i]; j++) {
+            int stop = routes[i][j];
+            stop_to_buses[stop][stop_index_tracker[stop]++] = i;
+        }
+    }
+    int* visited_stops = (int*)calloc(MAX_STOPS, sizeof(int));
+    int* visited_buses = (int*)calloc(routesSize, sizeof(int));
+    int max_queue_capacity = 0;
+    for (int i = 0; i < routesSize; i++) {
+        max_queue_capacity += routesColSize[i];
+    }
+    max_queue_capacity += 1; 
+    QueueNode* queue = (QueueNode*)malloc(max_queue_capacity * sizeof(QueueNode));
+    int head = 0;
+    int tail = 0;
+    queue[tail].stop = source;
+    queue[tail].bus_count = 0;
+    tail++;
+    visited_stops[source] = 1;
+    while (head < tail) {
+        QueueNode current = queue[head++];
+        int curr_stop = current.stop;
+        int curr_buses = current.bus_count;
+        int total_buses_here = bus_count_per_stop[curr_stop];
+        for (int i = 0; i < total_buses_here; i++) {
+            int bus_id = stop_to_buses[curr_stop][i];
+
+            if (visited_buses[bus_id]) {
+                continue;
+            }
+            visited_buses[bus_id] = 1;
+            for (int j = 0; j < routesColSize[bus_id]; j++) {
+                int next_stop = routes[bus_id][j];
+
+                if (next_stop == target) {
+                    free(bus_count_per_stop);
+                    free(stop_index_tracker);
+                    for (int k = 0; k < MAX_STOPS; k++) {
+                        if (stop_to_buses[k]) free(stop_to_buses[k]);
+                    }
+                    free(stop_to_buses);
+                    free(visited_stops);
+                    free(visited_buses);
+                    free(queue);
+
+                    return curr_buses + 1;
+                }
+
+                if (!visited_stops[next_stop]) {
+                    visited_stops[next_stop] = 1;
+                    queue[tail].stop = next_stop;
+                    queue[tail].bus_count = curr_buses + 1;
+                    tail++;
+                }
+            }
+        }
+    }
+    free(bus_count_per_stop);
+    free(stop_index_tracker);
+    for (int k = 0; k < MAX_STOPS; k++) {
+        if (stop_to_buses[k]) free(stop_to_buses[k]);
+    }
+    free(stop_to_buses);
+    free(visited_stops);
+    free(visited_buses);
+    free(queue);
+    return -1; 
+}
