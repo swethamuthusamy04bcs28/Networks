@@ -1,0 +1,60 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int binarySearch(int* arr, int size, int target) {
+    int low = 0, high = size - 1;
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        if (arr[mid] == target) {
+            return mid;
+        } else if (arr[mid] < target) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+    return low;
+}
+
+double* medianSlidingWindow(int* nums, int numsSize, int k, int* returnSize) {
+    *returnSize = numsSize - k + 1;
+    double* result = (double*)malloc((*returnSize) * sizeof(double));
+    int* window = (int*)malloc(k * sizeof(int));
+    
+    for (int i = 0; i < k; i++) {
+        window[i] = nums[i];
+    }
+    
+    for (int i = 1; i < k; i++) {
+        int key = window[i];
+        int j = i - 1;
+        while (j >= 0 && window[j] > key) {
+            window[j + 1] = window[j];
+            j--;
+        }
+        window[j + 1] = key;
+    }
+    
+    #define GET_MEDIAN() \
+        ((k % 2 == 1) ? (double)window[k / 2] : ((double)window[k / 2 - 1] + (double)window[k / 2]) / 2.0)
+
+    result[0] = GET_MEDIAN();
+    
+    for (int i = k; i < numsSize; i++) {
+        int outElement = nums[i - k];
+        int inElement = nums[i];
+        
+        int delIdx = binarySearch(window, k, outElement);
+        memmove(&window[delIdx], &window[delIdx + 1], (k - 1 - delIdx) * sizeof(int));
+        
+        int insIdx = binarySearch(window, k - 1, inElement);
+        memmove(&window[insIdx + 1], &window[insIdx], (k - 1 - insIdx) * sizeof(int));
+        window[insIdx] = inElement;
+        
+        result[i - k + 1] = GET_MEDIAN();
+    }
+    
+    free(window);
+    return result;
+}
