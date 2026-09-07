@@ -1,0 +1,82 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+long* riddle(int arr_count, long* arr, int* result_count) {
+    *result_count = arr_count;
+    long* result = (long*)malloc(arr_count * sizeof(long));
+    int* left = (int*)malloc(arr_count * sizeof(int));
+    int* right = (int*)malloc(arr_count * sizeof(int));
+    int* stack = (int*)malloc(arr_count * sizeof(int));
+    long* ans = (long*)malloc((arr_count + 2) * sizeof(long));
+    
+    int top = -1;
+    for (int i = 0; i < arr_count; i++) {
+        while (top >= 0 && arr[stack[top]] >= arr[i]) {
+            top--;
+        }
+        left[i] = (top == -1) ? -1 : stack[top];
+        stack[++top] = i;
+    }
+    
+    top = -1;
+    for (int i = arr_count - 1; i >= 0; i--) {
+        while (top >= 0 && arr[stack[top]] >= arr[i]) {
+            top--;
+        }
+        right[i] = (top == -1) ? arr_count : stack[top];
+        stack[++top] = i;
+    }
+    
+    for (int i = 0; i <= arr_count; i++) {
+        ans[i] = 0;
+    }
+    
+    for (int i = 0; i < arr_count; i++) {
+        int len = right[i] - left[i] - 1;
+        if (arr[i] > ans[len]) {
+            ans[len] = arr[i];
+        }
+    }
+    
+    for (int i = arr_count - 1; i >= 1; i--) {
+        if (ans[i + 1] > ans[i]) {
+            ans[i] = ans[i + 1];
+        }
+    }
+    
+    for (int i = 0; i < arr_count; i++) {
+        result[i] = ans[i + 1];
+    }
+    
+    free(left);
+    free(right);
+    free(stack);
+    free(ans);
+    
+    return result;
+}
+
+int main() {
+    int n;
+    if (scanf("%d", &n) != 1) return 0;
+    
+    long* arr = (long*)malloc(n * sizeof(long));
+    for (int i = 0; i < n; i++) {
+        if (scanf("%ld", &arr[i]) != 1) return 0;
+    }
+    
+    int result_count;
+    long* res = riddle(n, arr, &result_count);
+    
+    for (int i = 0; i < result_count; i++) {
+        printf("%ld", res[i]);
+        if (i < result_count - 1) {
+            printf(" ");
+        }
+    }
+    printf("\n");
+    
+    free(arr);
+    free(res);
+    return 0;
+}
